@@ -1,6 +1,6 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distributions::Alphanumeric, Rng}; // random
 use std::error::Error;
 use std::fs;
 
@@ -26,14 +26,17 @@ fn usage() -> TestResult {
 
 // --------------------------------------------------
 fn gen_bad_file() -> String {
-    loop {
+    loop { // start infinite loop
         let filename: String = rand::thread_rng()
+            //create random string of 7 alphanumeric characters
             .sample_iter(&Alphanumeric)
             .take(7)
             .map(char::from)
             .collect();
 
-        if fs::metadata(&filename).is_err() {
+        // fs::metadata returns err when given filename doesn't exist, in that 
+        // case return the nonexistent filename
+        if fs::metadata(&filename).is_err() { 
             return filename;
         }
     }
