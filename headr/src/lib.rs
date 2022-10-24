@@ -1,5 +1,7 @@
 use clap::{App, Arg};
 use std::error::Error;
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Read};
 
 type MyResult<T> = Result<T, Box<dyn Error>>;
 
@@ -49,8 +51,10 @@ pub fn get_args() -> MyResult<Config> {
 
     let lines = matches
         .value_of("lines")
-        .map(parse_positive_int) // convert str to int
-        .transpose() 
+        .map(parse_positive_int) // unpacks a &str from Some and sends it to the fn
+        // Option::map returns Option<Result>, use transpose()
+        // to make it Result<Option>
+        .transpose()
         .map_err(|e| format!("illegal line count -- {}", e))?;
     
     let bytes = matches
@@ -61,16 +65,62 @@ pub fn get_args() -> MyResult<Config> {
 
 
     Ok(Config {
+        // using .unwrap() it's safe when there should be a least value.
+        // in files and lines there's always a value (the default)
         files: matches.values_of_lossy("files").unwrap(),
         lines: lines.unwrap(),
-        bytes,
+        bytes, // idiomatic way to write bytes: bytes,
     })
 }
 
 // -----------------------------------------------------------------------------
 
 pub fn run(config: Config) -> MyResult<()> {
-    println!("{:#?}", config);
+    let num_files = config.files.len();
+
+    for (file_num, filename) in config.files.iter().enumerate() {
+        match open(&filename) {
+            Err(err) => eprintln!("{}: {}", filename, err),
+            Ok(mut file) => {
+                if num_files > 1 {
+                    println!(
+                        "{}==> {} <==",
+                        if file_num > 0 {"\n"} else {""},
+                        &filename
+                    );
+                }
+
+                // check if config.bytes is some number of bytes to read
+                if let Some(num_bytes) = config.bytes {
+                    let mut handle = file.take(num_bytes as u64); // std::io::Read expects u64
+                    let mut buffer = vec![0; num_bytes]; // create vector of zeros of len num_bytes
+                    
+                    // read the desired number of bytes from the filehandle into the 
+                    // buffer.
+                    let bytes_read = handle.read(&mut buffer)?;
+                    print!(
+                        "{}",
+                        //convert selected bytes to a string
+                        String::from_utf8_lossy(&buffer[..bytes_read])
+                        // note the range operation .. to select only the bytes
+                        // that actually read. 
+                    );
+
+                } else {
+                    let mut line = String::new();
+                    for _ in 0..config.lines {
+                        let bytes = file.read_line(&mut line)?;
+                        if bytes == 0 {
+                            break;
+                        }
+                        print!("{}", line);
+                        line.clear();
+                    }
+                }
+
+            }
+        }
+    }
     Ok(())
 }
 
@@ -103,3 +153,14 @@ fn test_parse_positive_int() {
     assert!(res.is_err());
     assert_eq!(res.unwrap_err().to_string(), "0".to_string());
 }
+
+// ---------------------------------------------------------------------------
+
+fn open(filename: &str) -> MyResult<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
+    }
+}
+
+// -----------------------------------------------------------------------------
