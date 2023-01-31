@@ -12,3 +12,4 @@ Cargo.lock
 
 # ignore hello_world directory
 hello/
+*.txt
