@@ -26,25 +26,21 @@ fn run(args: &[&str], expected_file: &str) -> TestResult {
 }
 
 #[test]
-fn hello1() -> TestResult {
+fn hello1() {
     run(&["Hello there"], "tests/expected/hello1.txt");
-    Ok(())
 }
 
 #[test]
-fn hello2() -> TestResult {
+fn hello2() {
     run(&["Hello", "there"], "tests/expected/hello2.txt");
-    Ok(())
 }
 
 #[test]
-fn hello3() -> TestResult {
+fn hello3() {
     run(&["Hello there", "-n"], "tests/expected/hello3.txt");
-    Ok(())
 }
 
 #[test]
-fn hello4() -> TestResult {
+fn hello4() {
     run(&["-n", "Hello", "there"], "tests/expected/hello4.txt");
-    Ok(())
 }
